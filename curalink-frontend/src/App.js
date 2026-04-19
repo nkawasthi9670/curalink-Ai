@@ -5,22 +5,30 @@ import ChatPanel from './components/ChatPanel';
 import SourcesPanel from './components/SourcesPanel';
 import './App.css';
 
-
 export default function App() {
+
+  // ✅ FIX: correct variable
   const [sessionId] = useState(uuidv4());
+
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello! I'm Curalink, your AI medical research assistant. Fill in your details on the left, then ask me anything about your condition — I'll search thousands of publications and clinical trials to give you research-backed answers.",
+      content:
+        "Hello! I'm Curalink, your AI medical research assistant. Fill in your details on the left, then ask me anything about your condition — I'll search thousands of publications and clinical trials to give you research-backed answers.",
       sources: null,
     },
   ]);
-  const [context, setContext] = useState({ disease: '', patientName: '', location: '' });
+
+  const [context, setContext] = useState({
+    disease: '',
+    patientName: '',
+    location: '',
+  });
+
   const [loading, setLoading] = useState(false);
   const [activeSources, setActiveSources] = useState(null);
 
   const sendMessage = useCallback(async (message) => {
-    console.log("sending message:", message);
     if (!message.trim() || loading) return;
 
     const userMsg = { role: 'user', content: message };
@@ -28,13 +36,21 @@ export default function App() {
     setLoading(true);
 
     try {
-      console.log("Sending message:", message);
-      const res = await fetch('https://curalink-ai-tagr.onrender.com/api/chat', {
-        
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: SESSION_ID, message, context }),
-      });
+      const res = await fetch(
+        'https://curalink-ai-tagr.onrender.com/api/chat',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // ✅ FIX: SESSION_ID ❌ → sessionId ✅
+          body: JSON.stringify({
+            sessionId: sessionId,
+            message,
+            context,
+          }),
+        }
+      );
 
       const data = await res.json();
 
@@ -45,16 +61,25 @@ export default function App() {
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
-      if (data.sources) setActiveSources(data.sources);
-    } catch {
+
+      if (data.sources) {
+        setActiveSources(data.sources);
+      }
+
+    } catch (error) {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Connection error. Make sure the backend is running on port 5000.', sources: null },
+        {
+          role: 'assistant',
+          content:
+            'Connection error. Make sure the backend is running properly.',
+          sources: null,
+        },
       ]);
     } finally {
       setLoading(false);
     }
-  }, [loading, context]);
+  }, [loading, context, sessionId]);
 
   return (
     <div className="app-shell">
