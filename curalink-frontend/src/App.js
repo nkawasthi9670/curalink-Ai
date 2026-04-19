@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import ChatPanel from './components/ChatPanel';
 import SourcesPanel from './components/SourcesPanel';
 import './App.css';
+const SESSION_ID = "test-session";
 
 const SESSION_ID = uuidv4();
 
@@ -20,6 +21,7 @@ export default function App() {
   const [activeSources, setActiveSources] = useState(null);
 
   const sendMessage = useCallback(async (message) => {
+    console.log("sending message:", message);
     if (!message.trim() || loading) return;
 
     const userMsg = { role: 'user', content: message };
@@ -27,7 +29,9 @@ export default function App() {
     setLoading(true);
 
     try {
+      console.log("Sending message:", message);
       const res = await fetch('https://curalink-ai-tagr.onrender.com/api/chat', {
+        
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: SESSION_ID, message, context }),
