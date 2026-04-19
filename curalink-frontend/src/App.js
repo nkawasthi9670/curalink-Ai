@@ -4,7 +4,7 @@ import Sidebar from './components/Sidebar';
 import ChatPanel from './components/ChatPanel';
 import SourcesPanel from './components/SourcesPanel';
 import './App.css';
-const SESSION_ID = "test-session";
+
 
 const SESSION_ID = uuidv4();
 
