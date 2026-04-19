@@ -217,7 +217,7 @@ async function callOllama(prompt) {
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.HF_API_KEY}`,
+          Authorization: `Bearer ${process.env.HF_TOKEN}`,
           'Content-Type': 'application/json',
         },
         timeout: 60000,
