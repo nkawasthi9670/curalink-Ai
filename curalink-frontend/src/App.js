@@ -6,8 +6,7 @@ import SourcesPanel from './components/SourcesPanel';
 import './App.css';
 
 
-const SESSION_ID = uuidv4();
-
+const [sessionId] = useState(uuidv4());
 export default function App() {
   const [messages, setMessages] = useState([
     {
