@@ -178,10 +178,12 @@ Respond now:`;
 }
 
 async function callOllama(prompt) {
-  const isLocal = process.env.USE_OLLAMA === 'true';
+  console.log('[HF] Starting request...');
+  console.log('[HF] Token exists:', !!process.env.HF_TOKEN);
+  console.log('[HF] USE_OLLAMA value:', process.env.USE_OLLAMA);
 
   // LOCAL: use Ollama
-  if (isLocal) {
+  if (process.env.USE_OLLAMA === 'true') {
     try {
       const res = await axios.post(
         `${process.env.OLLAMA_URL}/api/generate`,
@@ -201,43 +203,72 @@ async function callOllama(prompt) {
     }
   }
 
-  // DEPLOYED: use Hugging Face Inference API (free, open-source)
-  try {
-    console.log('[HF] Calling Mistral-7B on Hugging Face...');
-    const res = await axios.post(
-      'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3',
-      {
-        inputs: prompt,
-        parameters: {
-          max_new_tokens: 800,
-          temperature: 0.3,
-          top_p: 0.9,
-          return_full_text: false,
-        },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.HF_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 60000,
-      }
-    );
+  // DEPLOYED: Try multiple free HF models in order
+  const MODELS = [
+    'https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta',
+    'https://api-inference.huggingface.co/models/microsoft/phi-2',
+    'https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct',
+  ];
 
-    const output = res.data?.[0]?.generated_text || '';
-    console.log('[HF] Response received');
-    return output.trim() || buildFallbackResponse();
-  } catch (err) {
-console.error('[HF] Error:', err.response?.status, err.response?.data || err.message);    return buildFallbackResponse();
+  for (const modelUrl of MODELS) {
+    try {
+      console.log('[HF] Trying model:', modelUrl);
+      const res = await axios.post(
+        modelUrl,
+        {
+          inputs: prompt,
+          parameters: {
+            max_new_tokens: 600,
+            temperature: 0.3,
+            return_full_text: false,
+          },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.HF_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 55000,
+        }
+      );
+
+      console.log('[HF] Status:', res.status);
+
+      // Handle loading response from HF
+      if (res.data?.error?.includes('loading')) {
+        console.log('[HF] Model loading, trying next...');
+        continue;
+      }
+
+      const output = res.data?.[0]?.generated_text || '';
+      if (!output.trim()) {
+        console.log('[HF] Empty output, trying next model...');
+        continue;
+      }
+
+      console.log('[HF] Success! Length:', output.length);
+      return output.trim();
+
+    } catch (err) {
+      console.error('[HF] Model failed:', modelUrl);
+      console.error('[HF] Status:', err.response?.status);
+      console.error('[HF] Error:', JSON.stringify(err.response?.data));
+      // Try next model
+      continue;
+    }
   }
+
+  // All models failed
+  console.error('[HF] All models failed, using fallback');
+  return buildFallbackResponse();
 }
 
 function buildFallbackResponse() {
   return `## Overview
 Research retrieval was successful. Please review the sources panel for relevant publications and clinical trials.
 
-## Note  
-AI synthesis is temporarily unavailable. Sources above are retrieved directly from PubMed, OpenAlex, and ClinicalTrials.gov.
+## Note
+AI synthesis is temporarily unavailable. Sources are retrieved directly from PubMed, OpenAlex, and ClinicalTrials.gov.
 
 ## What to do
 - Click **Read paper** on any source card to access the full study
