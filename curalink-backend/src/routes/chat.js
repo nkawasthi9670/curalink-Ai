@@ -228,8 +228,7 @@ async function callOllama(prompt) {
     console.log('[HF] Response received');
     return output.trim() || buildFallbackResponse();
   } catch (err) {
-    console.error('[HF] Error:', err.message);
-    return buildFallbackResponse();
+console.error('[HF] Error:', err.response?.status, err.response?.data || err.message);    return buildFallbackResponse();
   }
 }
 
