@@ -6,7 +6,13 @@ const mongoose = require('mongoose');
 const chatRoutes = require('./src/routes/chat');
 
 const app = express();
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://curalink-ai-weld.vercel.app'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
