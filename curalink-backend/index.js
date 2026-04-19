@@ -10,9 +10,7 @@ app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json());
 
 // Routes
-app.get("/", (req, res) => {
-  res.send("API working 🚀");
-});
+
 app.use('/api/chat', chatRoutes);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
