@@ -122,12 +122,10 @@ Create a `.env` file:
 
 ```env
 PORT=5000
-MONGO_URI=your_mongodb_atlas_uri
+MONGO_URI=mongodb+srv://nikhilkumarawasthi11_db_user:curalink%401@cluster0.qeq13zn.mongodb.net/curlink?retryWrites=true&w=majority
 OLLAMA_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.2
 USE_OLLAMA=true
-GROQ_API_KEY=your_groq_key
-NCBI_API_KEY=
 ```
 
 ### 3. Pull the LLM model
@@ -141,7 +139,7 @@ ollama pull llama3.2
 ```bash
 # Terminal 1 — Ollama is already running in background on Windows
 # Terminal 2 — Backend
-node index.js
+npm run dev
 ```
 
 ### 5. Start the frontend
@@ -243,9 +241,9 @@ Clinical trials are additionally boosted by recruiting status — `RECRUITING` t
 
 Environment variables required:
 ```
-MONGO_URI=
-GROQ_API_KEY=
+MONGO_URI=mongodb+srv://nikhilkumarawasthi11_db_user:curalink%401@cluster0.qeq13zn.mongodb.net/curlink?retryWrites=true&w=majority
 USE_OLLAMA=false
+HF_TOKEN=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
 PORT=5000
 ```
 
