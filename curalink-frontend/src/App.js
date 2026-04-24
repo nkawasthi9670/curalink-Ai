@@ -41,7 +41,7 @@ export default function App() {
         {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json', 
           },
           // ✅ FIX: SESSION_ID ❌ → sessionId ✅
           body: JSON.stringify({

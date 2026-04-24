@@ -178,24 +178,14 @@ Respond now:`;
 }
 
 async function callOllama(prompt) {
-  console.log('[HF] Starting request...');
-  console.log('[HF] Token exists:', !!process.env.HF_TOKEN);
-  console.log('[HF] USE_OLLAMA value:', process.env.USE_OLLAMA);
-
-  // LOCAL: use Ollama
   if (process.env.USE_OLLAMA === 'true') {
     try {
       const res = await axios.post(
         `${process.env.OLLAMA_URL}/api/generate`,
-        {
-          model: process.env.OLLAMA_MODEL || 'llama3.2',
-          prompt,
-          stream: false,
-          options: { temperature: 0.3, num_predict: 800, num_ctx: 2048 },
-        },
+        { model: process.env.OLLAMA_MODEL || 'llama3.2', prompt, stream: false,
+          options: { temperature: 0.3, num_predict: 800 } },
         { timeout: 180000 }
       );
-      console.log('[Ollama] Response received');
       return res.data?.response || buildFallbackResponse();
     } catch (err) {
       console.error('[Ollama] Error:', err.message);
@@ -203,64 +193,28 @@ async function callOllama(prompt) {
     }
   }
 
-  // DEPLOYED: Try multiple free HF models in order
-  const MODELS = [
-    'https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta',
-    'https://api-inference.huggingface.co/models/microsoft/phi-2',
-    'https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct',
-  ];
-
-  for (const modelUrl of MODELS) {
-    try {
-      console.log('[HF] Trying model:', modelUrl);
-      const res = await axios.post(
-        modelUrl,
-        {
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 600,
-            temperature: 0.3,
-            return_full_text: false,
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.HF_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
-          timeout: 55000,
-        }
-      );
-
-      console.log('[HF] Status:', res.status);
-
-      // Handle loading response from HF
-      if (res.data?.error?.includes('loading')) {
-        console.log('[HF] Model loading, trying next...');
-        continue;
+  try {
+    console.log('[Groq] Calling LLaMA3...');
+    const res = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model: 'llama-3.1-8b-instant',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 800,
+        temperature: 0.3,
+      },
+      {
+        headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+        timeout: 30000,
       }
-
-      const output = res.data?.[0]?.generated_text || '';
-      if (!output.trim()) {
-        console.log('[HF] Empty output, trying next model...');
-        continue;
-      }
-
-      console.log('[HF] Success! Length:', output.length);
-      return output.trim();
-
-    } catch (err) {
-      console.error('[HF] Model failed:', modelUrl);
-      console.error('[HF] Status:', err.response?.status);
-      console.error('[HF] Error:', JSON.stringify(err.response?.data));
-      // Try next model
-      continue;
-    }
+    );
+    const output = res.data?.choices?.[0]?.message?.content || '';
+    console.log('[Groq] Success:', output.length, 'chars');
+    return output || buildFallbackResponse();
+  } catch (err) {
+    console.error('[Groq] Error:', err.response?.status, err.message);
+    return buildFallbackResponse();
   }
-
-  // All models failed
-  console.error('[HF] All models failed, using fallback');
-  return buildFallbackResponse();
 }
 
 function buildFallbackResponse() {
