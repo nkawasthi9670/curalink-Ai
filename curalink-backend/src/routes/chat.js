@@ -8,6 +8,7 @@ const { fetchOpenAlex } = require('../services/openalex');
 const { fetchClinicalTrials } = require('../services/clinicaltrials');
 const { expandQuery } = require('../utils/queryExpand');
 const { rerankPublications, rerankTrials } = require('../utils/rerank');
+const authMiddleware = require('../middleware/auth');
 
 /**
  * POST /api/chat
@@ -17,7 +18,7 @@ const { rerankPublications, rerankTrials } = require('../utils/rerank');
  *   context?: { disease, patientName, location }  // from structured form on first turn
  * }
  */
-router.post('/', async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   try {
     const { sessionId, message, context: incomingContext } = req.body;
 

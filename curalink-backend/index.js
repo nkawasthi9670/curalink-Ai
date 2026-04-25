@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 
+const authRoutes = require('./src/routes/auth');
 const chatRoutes = require('./src/routes/chat');
 
 const app = express();
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use('/api/chat', chatRoutes);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.use('/api/auth', authRoutes);
 
 // Connect MongoDB then start server
 mongoose
