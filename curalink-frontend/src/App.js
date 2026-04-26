@@ -5,6 +5,7 @@ import AuthPage from './pages/AuthPage';
 import Sidebar from './components/Sidebar';
 import ChatPanel from './components/ChatPanel';
 import SourcesPanel from './components/SourcesPanel';
+import { generatePDF } from './utils/generatePDF';
 
 const SESSION_ID = uuidv4();
 
@@ -30,7 +31,7 @@ function MainApp() {
     setMessages((prev) => [...prev, { role: 'user', content: message }]);
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/chat', {
+      const res = await fetch('https://curalink-ai-tagr.onrender.com/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -69,6 +70,7 @@ function MainApp() {
         onViewSources={setActiveSources}
         sources={activeSources}      
         context={context}  
+        generatePDF={ generatePDF}
       />
       <SourcesPanel sources={activeSources} />
     </div>
