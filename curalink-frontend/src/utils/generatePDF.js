@@ -1,3 +1,5 @@
+
+/* eslint-disable no-unused-vars */
 import jsPDF from 'jspdf';
 
 export async function generatePDF({ messages, sources, context }) {
