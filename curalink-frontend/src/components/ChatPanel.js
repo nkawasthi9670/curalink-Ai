@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { generatePDF } from '../utils/generatePDF';
 
 const QUICK_PROMPTS = [
   'Latest treatment options',
@@ -8,7 +9,7 @@ const QUICK_PROMPTS = [
   'Drug interactions to avoid',
 ];
 
-export default function ChatPanel({ messages, loading, onSend, onViewSources }) {
+export default function ChatPanel({ messages, loading, onSend, onViewSources, sources, context }) {
   const [input, setInput] = useState('');
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
@@ -38,15 +39,31 @@ export default function ChatPanel({ messages, loading, onSend, onViewSources }) 
     <div className="flex flex-col overflow-hidden border-r border-blue-900/20">
 
       {/* Header */}
+      
       <div className="px-6 py-4 border-b border-blue-900/20 flex items-center gap-2.5 bg-[#111827] flex-shrink-0">
-        <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        <span className="text-sm font-medium text-white">Research chat</span>
-        <span className="ml-auto text-xs text-slate-500">
-          {messages.length - 1} message{messages.length !== 2 ? 's' : ''}
-        </span>
-      </div>
+  <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+  <span className="text-sm font-medium text-white">Research chat</span>
+  <span className="ml-auto text-xs text-slate-500 mr-3">
+    {messages.length - 1} message{messages.length !== 2 ? 's' : ''}
+  </span>
+
+  {/* Download Button */}
+  {messages.length > 1 && (
+    <button
+      onClick={() => generatePDF({ messages, sources, context })}
+      className="flex items-center gap-1.5 text-xs text-teal-400 border border-teal-400/20 bg-teal-400/5 hover:bg-teal-400/15 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+    >
+      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download PDF
+    </button>
+  )}
+</div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">

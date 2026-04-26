@@ -4,34 +4,45 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
+    const savedToken = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
+
+    if (savedToken && savedUser) {
+      // Turant set karo — no waiting
+      setToken(savedToken);
+      setUser(JSON.parse(savedUser));
+      setLoading(false);
+
+      // Background mein verify karo
       fetch('https://curalink-ai-tagr.onrender.com/api/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${savedToken}` },
       })
         .then((r) => r.json())
         .then((data) => {
-          if (data.user) setUser(data.user);
-          else logout();
+          if (!data.user) logout();
         })
-        .catch(() => logout())
-        .finally(() => setLoading(false));
+        .catch(() => {
+          // Network error — keep user logged in
+        });
     } else {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
-  const login = (token, user) => {
-    localStorage.setItem('token', token);
-    setToken(token);
-    setUser(user);
+  const login = (newToken, newUser) => {
+    localStorage.setItem('token', newToken);
+    localStorage.setItem('user', JSON.stringify(newUser));
+    setToken(newToken);
+    setUser(newUser);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setToken(null);
     setUser(null);
   };

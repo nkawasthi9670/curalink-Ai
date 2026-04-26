@@ -30,7 +30,7 @@ function MainApp() {
     setMessages((prev) => [...prev, { role: 'user', content: message }]);
     setLoading(true);
     try {
-      const res = await fetch('https://curalink-ai-tagr.onrender.com/api/chat', {
+      const res = await fetch('http://localhost:5000/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,6 +67,8 @@ function MainApp() {
         loading={loading}
         onSend={sendMessage}
         onViewSources={setActiveSources}
+        sources={activeSources}      
+        context={context}  
       />
       <SourcesPanel sources={activeSources} />
     </div>
