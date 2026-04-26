@@ -43,15 +43,41 @@ router.post('/', authMiddleware, async (req, res) => {
 
     const { disease, patientName, location } = session.context;
 
-    // ── 2. Expand the query ──────────────────────────────────────────────────
-    const { pubmed, openalex, trials, combined } = expandQuery(message, disease);
+   // ── 2. Expand the query ──────────────────────────────────────────────────
+const { pubmed, openalex, trials, combined } = expandQuery(message, disease);
 
-    // ── 3. Parallel retrieval from all 3 sources ─────────────────────────────
-    const [pubmedRaw, openalexRaw, trialsRaw] = await Promise.allSettled([
-      fetchPubMed(pubmed, 80),
-      fetchOpenAlex(openalex, 100),
-      fetchClinicalTrials(disease || message, combined, location, 50),
-    ]);
+// ── 3. India tropical detection + query override ─────────────────────────
+const symptomText = (message + ' ' + (disease || '')).toLowerCase();
+
+// Cardiac detection — highest priority
+const isCardiac = ['chest pain', 'heart', 'sweating', 'shortness of breath', 
+  'palpitation', 'angina'].some(s => symptomText.includes(s));
+
+// Tropical detection — only if fever present
+const hasFever = symptomText.includes('fever');
+const isTropical = hasFever && ['joint pain', 'rash', 'fatigue', 'chills', 'body pain']
+  .some(s => symptomText.includes(s));
+
+console.log('[Query] isCardiac:', isCardiac, '| isTropical:', isTropical);
+
+const [pubmedRaw, openalexRaw, trialsRaw] = await Promise.allSettled([
+  fetchPubMed(
+    isCardiac ? 'heart attack myocardial infarction chest pain treatment emergency' :
+    isTropical ? 'dengue chikungunya typhoid fever India treatment' : pubmed,
+    80
+  ),
+  fetchOpenAlex(
+    isCardiac ? 'heart attack chest pain cardiac emergency treatment 2024' :
+    isTropical ? 'dengue fever chikungunya India 2024 treatment' : openalex,
+    100
+  ),
+  fetchClinicalTrials(
+    isCardiac ? 'myocardial infarction' :
+    isTropical ? 'dengue' : (disease || message),
+    combined, location, 50
+  ),
+]);
+  
 
     const publications = [
       ...(pubmedRaw.status === 'fulfilled' ? pubmedRaw.value : []),
@@ -135,49 +161,70 @@ router.post('/', authMiddleware, async (req, res) => {
 
 function buildPrompt({ patientName, disease, message, conversationHistory, publications, trials }) {
   const pubContext = publications
-    .map(
-      (p, i) =>
-        `[P${i + 1}] "${p.title}" (${p.source}, ${p.year})\n${p.abstract?.substring(0, 400)}`
-    )
+    .map((p, i) => `[P${i + 1}] "${p.title}" (${p.source}, ${p.year})\n${p.abstract?.substring(0, 400)}`)
     .join('\n\n');
 
   const trialContext = trials
-    .map(
-      (t, i) =>
-        `[T${i + 1}] "${t.title}" — Status: ${t.recruitingStatus}, Phase: ${t.phase}\n${t.summary?.substring(0, 300)}`
-    )
+    .map((t, i) => `[T${i + 1}] "${t.title}" — Status: ${t.recruitingStatus}\n${t.summary?.substring(0, 300)}`)
     .join('\n\n');
 
-  return `You are Curalink, an expert AI medical research assistant. You provide structured, evidence-based answers grounded ONLY in the provided research sources. Never hallucinate or invent studies.
+return `You are an advanced AI medical assistant with strong clinical reasoning.
 
-PATIENT CONTEXT:
+STEP 1 — CLASSIFY SYMPTOMS FIRST:
+- Chest pain + sweating + shortness of breath → CARDIAC (Heart Attack/Angina) — NEVER suggest Dengue
+- Fever + rash + joint pain → INFECTIOUS (Dengue/Chikungunya)
+- Fever + abdominal pain → TYPHOID
+- Fever + chills + sweating cycles → MALARIA
+
+CRITICAL RULES:
+1. NEVER suggest Dengue/Chikungunya if fever is NOT mentioned
+2. Chest pain = Cardiac emergency — suggest Heart Attack FIRST
+3. Only use symptoms given — do NOT hallucinate
+4. Cite [P1][P2] only if paper is directly relevant to symptoms
+
+PATIENT:
 - Name: ${patientName || 'Not provided'}
-- Disease: ${disease || 'Not specified'}
-- Question: ${message}
+- Condition: ${disease || 'Not specified'}
+- Location: India
 
-${conversationHistory ? `CONVERSATION HISTORY:\n${conversationHistory}\n` : ''}
+${conversationHistory ? `HISTORY:\n${conversationHistory}\n` : ''}
 
-RETRIEVED PUBLICATIONS:
-${pubContext || 'No publications retrieved.'}
+QUERY: ${message}
 
-RETRIEVED CLINICAL TRIALS:
-${trialContext || 'No clinical trials retrieved.'}
+RETRIEVED PUBLICATIONS (use ONLY if relevant to symptoms):
+${pubContext || 'None'}
 
-INSTRUCTIONS:
-1. Answer the patient's question directly and clearly.
-2. Structure your response with these sections:
-   ## Overview
-   ## Research Insights (cite [P1], [P2] etc.)
-   ## Clinical Trials (if relevant, cite [T1], [T2] etc.)
-   ## Key Takeaways
-3. Always cite your sources using [P1], [T1] etc.
-4. Use plain language — avoid unnecessary jargon.
-5. If the evidence is limited or mixed, say so honestly.
-6. Do NOT recommend specific treatments or dosages — direct patients to their physician.
+TRIALS:
+${trialContext || 'None'}
 
-Respond now:`;
+OUTPUT FORMAT:
+### 1. Case Category
+(Cardiac / Infectious / Neurological / Respiratory / General)
+
+### 2. Most Likely Conditions (Ranked)
+1. Disease (Confidence: XX%)
+   - Why: (symptom match only)
+   - Key Indicators:
+
+### 3. Less Likely Conditions
+- Disease — Why considered
+
+### 4. Recommended Diagnostic Tests
+- Test → Purpose
+
+### 5. Treatment Overview
+- Condition: treatment
+- Note: Consult physician before medication
+
+### 6. Risk & Urgency Level
+- Low / Moderate / High
+- If HIGH: "Seek immediate medical attention"
+
+### 7. Key Takeaways
+- bullet points
+
+REMEMBER: Chest pain without fever = CARDIAC not DENGUE. Never default to tropical diseases without fever.`;
 }
-
 async function callOllama(prompt) {
   if (process.env.USE_OLLAMA === 'true') {
     try {

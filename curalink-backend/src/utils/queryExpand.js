@@ -24,12 +24,16 @@ const DISEASE_SYNONYMS = {
  */
 function expandQuery(query, disease = '') {
   const normalizedDisease = disease.toLowerCase().trim();
+  const normalizedQuery = query.toLowerCase();
 
-  // Get synonyms if we recognise the disease
+  // India-specific symptom detection
+  const tropicalKeywords = ['fever', 'joint pain', 'rash', 'fatigue', 'chills', 'headache'];
+  const hasTropicalSymptoms = tropicalKeywords.some(k =>
+    normalizedQuery.includes(k) || normalizedDisease.includes(k)
+  );
+
   const synonyms = DISEASE_SYNONYMS[normalizedDisease] || [];
 
-  // Build the combined base query
-  // If the query already contains the disease name, don't repeat it
   const queryContainsDisease =
     query.toLowerCase().includes(normalizedDisease) || normalizedDisease === '';
 
@@ -37,18 +41,18 @@ function expandQuery(query, disease = '') {
     ? query.trim()
     : `${query.trim()} ${disease.trim()}`;
 
-  // PubMed uses boolean AND syntax
-  const pubmedTerms = [combined];
+  // Tropical disease boost for Indian patients
+  const tropicalBoost = hasTropicalSymptoms
+    ? ' dengue chikungunya typhoid tropical'
+    : '';
+
+  const pubmedTerms = [combined + tropicalBoost];
   if (synonyms.length > 0) {
-    // Add top 2 synonyms as OR alternatives for broader recall
     pubmedTerms.push(`(${synonyms.slice(0, 2).join(' OR ')})`);
   }
+
   const pubmed = pubmedTerms.join(' AND ');
-
-  // OpenAlex uses free-text search — keep it natural
-  const openalex = combined + (synonyms[0] ? ` ${synonyms[0]}` : '');
-
-  // ClinicalTrials uses the disease condition separately
+  const openalex = combined + (synonyms[0] ? ` ${synonyms[0]}` : '') + tropicalBoost;
   const trials = disease || query;
 
   return { pubmed, openalex, trials, combined };

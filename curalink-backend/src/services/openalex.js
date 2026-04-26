@@ -122,7 +122,7 @@ function reconstructAbstract(invertedIndex) {
     }
     return words.filter(Boolean).join(' ');
   } catch {
-    return '';
+    return '';            
   }
 }
 
