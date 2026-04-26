@@ -5,7 +5,6 @@ import AuthPage from './pages/AuthPage';
 import Sidebar from './components/Sidebar';
 import ChatPanel from './components/ChatPanel';
 import SourcesPanel from './components/SourcesPanel';
-import { generatePDF } from './utils/generatePDF';
 
 const SESSION_ID = uuidv4();
 
@@ -64,14 +63,13 @@ function MainApp() {
         onLogout={logout}
       />
       <ChatPanel
-        messages={messages}
-        loading={loading}
-        onSend={sendMessage}
-        onViewSources={setActiveSources}
-        sources={activeSources}      
-        context={context}  
-        generatePDF={ generatePDF}
-      />
+    messages={messages}
+  loading={loading}
+  onSend={sendMessage}
+  onViewSources={setActiveSources}
+  sources={activeSources}
+  context={context}
+/>
       <SourcesPanel sources={activeSources} />
     </div>
   );
